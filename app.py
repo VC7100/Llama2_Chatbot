@@ -7,13 +7,15 @@ from langchain.llms import CTransformers
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.memory import ConversationBufferMemory
+from langchain.document_loaders import Docx2txtLoader
 
 #load the pdf files from the path
-loader = DirectoryLoader('data/',glob="*.pdf",loader_cls=PyPDFLoader)
+#loader = DirectoryLoader('data/',glob="*.pdf",loader_cls=PyPDFLoader)
+loader = DirectoryLoader('data/',glob="*.docx",loader_cls=Docx2txtLoader)
 documents = loader.load()
 
 #split text into chunks
-text_splitter  = RecursiveCharacterTextSplitter(chunk_size=500,chunk_overlap=50)
+text_splitter  = RecursiveCharacterTextSplitter(chunk_size=500,chunk_overlap=100)
 text_chunks = text_splitter.split_documents(documents)
 
 #create embeddings
@@ -24,7 +26,7 @@ embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-
 vector_store = FAISS.from_documents(text_chunks,embeddings)
 
 #create llm
-llm = CTransformers(model="llama-2-7b-chat.ggmlv3.q4_0.bin",model_type="llama",
+llm = CTransformers(model="llama-2-7b-chat.ggmlv3.q6_K.bin",model_type="llama",
                     config={'max_new_tokens':128,'temperature':0.01})
 
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
@@ -33,7 +35,7 @@ chain = ConversationalRetrievalChain.from_llm(llm=llm,chain_type='stuff',
                                               retriever=vector_store.as_retriever(search_kwargs={"k":2}),
                                               memory=memory)
 
-st.title("HealthCare ChatBot 🧑🏽‍⚕️")
+st.title("Class AI TA")
 def conversation_chat(query):
     result = chain({"question": query, "chat_history": st.session_state['history']})
     st.session_state['history'].append((query, result["answer"]))
@@ -44,7 +46,7 @@ def initialize_session_state():
         st.session_state['history'] = []
 
     if 'generated' not in st.session_state:
-        st.session_state['generated'] = ["Hello! Ask me anything about 🤗"]
+        st.session_state['generated'] = ["Hello! Ask me anything about this class"]
 
     if 'past' not in st.session_state:
         st.session_state['past'] = ["Hey! 👋"]
@@ -55,7 +57,7 @@ def display_chat_history():
 
     with container:
         with st.form(key='my_form', clear_on_submit=True):
-            user_input = st.text_input("Question:", placeholder="Ask about your Mental Health", key='input')
+            user_input = st.text_input("Question:", placeholder="Ask about your class syllabus", key='input')
             submit_button = st.form_submit_button(label='Send')
 
         if submit_button and user_input:
